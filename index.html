@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SHAURYA | AETERNA | Digital Atelier</title>
+    
+    <!-- Luxury Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <style>
+        :root {
+            --c-ivory: #F3D9BD;
+            --c-sand: #D6A28C;
+            --c-terra: #B87862;
+            --c-dark: #0D0B0B;
+            --c-obsidian: #050404;
+            --font-serif: 'Cinzel', serif;
+            --font-sans: 'Montserrat', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none; /* Custom cursor */
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: var(--c-obsidian);
+            color: var(--c-ivory);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+            overscroll-behavior: none;
+        }
+
+        /* Smooth scroll container proxy */
+        #scroll-proxy {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1000vh; /* Scroll length */
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* WebGL Canvas */
+        #webgl-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+        }
+        canvas {
+            display: block;
+            outline: none;
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3vw 4vw;
+            mix-blend-mode: difference;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .logo {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            letter-spacing: 0.4em;
+            font-weight: 400;
+            text-transform: uppercase;
+        }
+
+        .nav-pill {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            background: rgba(243, 217, 189, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(243, 217, 189, 0.1);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            transition: background 0.4s ease;
+        }
+        .nav-pill:hover {
+            background: rgba(243, 217, 189, 0.15);
+        }
+
+        /* Cinematic Text overlays mapped to scroll */
+        .cinematic-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+        }
+        
+        .title-main {
+            font-family: var(--font-serif);
+            font-size: clamp(3rem, 8vw, 10rem);
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+        .title-sub {
+            font-family: var(--font-sans);
+            font-size: clamp(0.7rem, 1vw, 1.2rem);
+            letter-spacing: 0.5em;
+            font-weight: 200;
+            color: var(--c-sand);
+        }
+
+        /* Specific typographic moments */
+        #text-intro { opacity: 1; } /* Handled by GSAP */
+        #text-signature { display: none; }
+
+        /* Loader */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--c-obsidian);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 2s cubic-bezier(0.76, 0, 0.24, 1);
+        }
+        .loader-brand {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            letter-spacing: 0.5em;
+            margin-bottom: 2rem;
+            opacity: 0.7;
+        }
+        .loader-progress-container {
+            width: 200px;
+            height: 1px;
+            background: rgba(243, 217, 189, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .loader-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: var(--c-ivory);
+            transition: width 0.1s ease;
+        }
+        .loader-status {
+            margin-top: 1rem;
+            font-size: 0.6rem;
+            letter-spacing: 0.3em;
+            color: var(--c-sand);
+            text-transform: uppercase;
+        }
+
+        /* Custom Cursor */
+        #cursor-dot {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: var(--c-ivory);
+            border-radius: 50%;
+            top: 0; left: 0;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, opacity 0.3s;
+        }
+        #cursor-ring {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            border: 1px solid rgba(243, 217, 189, 0.4);
+            border-radius: 50%;
+            top: 0; left: 0;
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s, border-color 0.4s;
+            will-change: transform;
+        }
+
+        /* Film Grain / Noise Overlay */
+        #film-grain {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 90;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* WebGL Fallback */
+        #fallback {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: var(--c-obsidian);
+            z-index: 5;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        .fallback-active #fallback {
+            display: flex;
+        }
+        .fallback-active #webgl-container, .fallback-active #scroll-proxy {
+            display: none;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1.5rem;
+            pointer-events: auto;
+        }
+        .audio-btn {
+            background: none;
+            border: none;
+            color: var(--c-ivory);
+            font-family: var(--font-sans);
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        .audio-btn:hover { opacity: 1; }
+
+        /* Media Queries */
+        @media (max-width: 768px) {
+            .nav-pill { display: none; }
+            .title-main { letter-spacing: 0.1em; }
+            #ui-layer { padding: 6vw; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- WebGL Rendering Surface -->
+    <div id="webgl-container"></div>
+
+    <!-- Scroll Controller Proxy -->
+    <div id="scroll-proxy"></div>
+
+    <!-- UI & Typography Layer -->
+    <div id="ui-layer">
+        <header>
+            <div class="logo">Shaurya</div>
+            <div class="nav-pill hoverable">
+                <span>World</span>
+                <span>Work</span>
+                <span>Systems</span>
+            </div>
+            <div class="controls">
+                <button class="audio-btn hoverable" id="audio-toggle">SOUND [OFF]</button>
+            </div>
+        </header>
+
+        <!-- Dynamic Typographic Elements -->
+        <div class="cinematic-text" id="text-intro">
+            <h1 class="title-main">SHAURYA</h1>
+            <p class="title-sub">DIGITAL ATELIER & SYSTEMS</p>
+        </div>
+
+        <div class="cinematic-text" id="text-projects">
+            <h1 class="title-main" style="font-size: clamp(2rem, 5vw, 6rem);">ARCHITECTURES</h1>
+            <p class="title-sub">CREATIVE TECHNOLOGY</p>
+        </div>
+
+        <div class="cinematic-text" id="text-signature">
+            <div id="sig-s" class="title-main" style="margin-bottom:0;">S</div>
+            <div id="sig-full" class="title-sub" style="opacity:0; margin-top: 1rem;">SHAURYA</div>
+        </div>
+    </div>
+
+    <!-- Texture / Film Grain -->
+    <div id="film-grain"></div>
+
+    <!-- Custom Cursor -->
+    <div id="cursor-dot"></div>
+    <div id="cursor-ring"></div>
+
+    <!-- Loading Sequence -->
+    <div id="loader">
+        <div class="loader-brand">SHAURYA</div>
+        <div class="loader-progress-container">
+            <div class="loader-bar" id="loader-bar"></div>
+        </div>
+        <div class="loader-status" id="loader-status">INITIALIZING DIGITAL UNIVERSE</div>
+    </div>
+
+    <!-- 2D Fallback for missing WebGL -->
+    <div id="fallback">
+        <h1 class="title-main">SHAURYA</h1>
+        <p class="title-sub">CREATIVE TECHNOLOGY / DIGITAL SYSTEMS</p>
+        <p style="margin-top: 2rem; font-size: 0.8rem; opacity: 0.5; max-width: 400px; line-height: 1.6;">
+            Your device or browser currently restricts WebGL rendering. <br>Please experience this digital atelier on a supported modern device.
+        </p>
+    </div>
+
+    <!-- Core Application Logic -->
+    <script>
+        // ============================================================================
+        // UTILITIES & SHADERS
+        // ============================================================================
+        
+        const GLSL = {
+            simplexNoise3D: `
+                vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
+                vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
+                float snoise(vec3 v){ 
+                    const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+                    const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+                    vec3 i  = floor(v + dot(v, C.yyy) );
+                    vec3 x0 = v - i + dot(i, C.xxx) ;
+                    vec3 g = step(x0.yzx, x0.xyz);
+                    vec3 l = 1.0 - g;
+                    vec3 i1 = min( g.xyz, l.zxy );
+                    vec3 i2 = max( g.xyz, l.zxy );
+                    vec3 x1 = x0 - i1 + 1.0 * C.xxx;
+                    vec3 x2 = x0 - i2 + 2.0 * C.xxx;
+                    vec3 x3 = x0 - 1.0 + 3.0 * C.xxx;
+                    i = mod(i, 289.0 ); 
+                    vec4 p = permute( permute( permute( 
+                                 i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                               + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) 
+                               + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+                    float n_ = 1.0/7.0;
+                    vec3  ns = n_ * D.wyz - D.xzx;
+                    vec4 j = p - 49.0 * floor(p * ns.z *ns.z);
+                    vec4 x_ = floor(j * ns.z);
+                    vec4 y_ = floor(j - 7.0 * x_ );
+                    vec4 x = x_ *ns.x + ns.yyyy;
+                    vec4 y = y_ *ns.x + ns.yyyy;
+                    vec4 h = 1.0 - abs(x) - abs(y);
+                    vec4 b0 = vec4( x.xy, y.xy );
+                    vec4 b1 = vec4( x.zw, y.zw );
+                    vec4 s0 = floor(b0)*2.0 + 1.0;
+                    vec4 s1 = floor(b1)*2.0 + 1.0;
+                    vec4 sh = -step(h, vec4(0.0));
+                    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+                    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+                    vec3 p0 = vec3(a0.xy,h.x);
+                    vec3 p1 = vec3(a0.zw,h.y);
+                    vec3 p2 = vec3(a1.xy,h.z);
+                    vec3 p3 = vec3(a1.zw,h.w);
+                    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+                    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                    m = m * m;
+                    return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), 
+                                                dot(p2,x2), dot(p3,x3) ) );
+                }
+            `,
+            sunVertex: `
+                varying vec2 vUv;
+                varying vec3 vPosition;
+                varying vec3 vNormal;
+                uniform float uTime;
+                
+                void main() {
+                    vUv = uv;
+                    vNormal = normalize(normalMatrix * normal);
+                    vPosition = position;
+                    
+                    // Subtle breathing
+                    float displacement = sin(position.y * 5.0 + uTime) * 0.1;
+                    vec3 newPosition = position + normal * displacement;
+                    
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+                }
+            `,
+            sunFragment: `
+                varying vec2 vUv;
+                varying vec3 vPosition;
+                varying vec3 vNormal;
+                uniform float uTime;
+                uniform vec3 uColorA;
+                uniform vec3 uColorB;
+                
+                void main() {
+                    // Fresnel glow
+                    vec3 viewDirection = normalize(cameraPosition - vPosition);
+                    float fresnel = dot(viewDirection, vNormal);
+                    fresnel = clamp(1.0 - fresnel, 0.0, 1.0);
+                    fresnel = pow(fresnel, 2.5);
+                    
+                    // Pulse
+                    float pulse = sin(uTime * 0.5) * 0.5 + 0.5;
+                    
+                    vec3 coreColor = mix(uColorA, uColorB, vUv.y);
+                    vec3 glowColor = uColorB * (fresnel * 2.0);
+                    
+                    vec3 finalColor = coreColor + glowColor + (pulse * 0.2);
+                    
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `,
+            waterVertex: `
+                varying vec2 vUv;
+                varying vec3 vWorldPosition;
+                uniform float uTime;
+                
+                void main() {
+                    vUv = uv;
+                    vec3 pos = position;
+                    // Procedural ripple
+                    float wave = sin(pos.x * 0.2 + uTime) * cos(pos.y * 0.2 + uTime) * 1.5;
+                    pos.z += wave;
+                    vec4 worldPos = modelMatrix * vec4(pos, 1.0);
+                    vWorldPosition = worldPos.xyz;
+                    gl_Position = projectionMatrix * viewMatrix * worldPos;
+                }
+            `,
+            waterFragment: `
+                varying vec2 vUv;
+                varying vec3 vWorldPosition;
+                uniform float uTime;
+                uniform vec3 uSunPos;
+                uniform vec3 uWaterColor;
+                uniform vec3 uHighlightColor;
+                
+                void main() {
+                    vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                    vec3 lightDir = normalize(uSunPos - vWorldPosition);
+                    
+                    // Fake normal based on UV and time
+                    vec3 normal = vec3(
+                        sin(vUv.x * 50.0 + uTime) * 0.1,
+                        0.9,
+                        cos(vUv.y * 50.0 + uTime) * 0.1
+                    );
+                    normal = normalize(normal);
+                    
+                    // Specular reflection (fake sun reflection)
+                    vec3 reflectDir = reflect(-lightDir, normal);
+                    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 30.0);
+                    
+                    // Fresnel
+                    float fresnel = 1.0 - max(dot(viewDir, vec3(0.0, 1.0, 0.0)), 0.0);
+                    fresnel = pow(fresnel, 3.0);
+                    
+                    vec3 finalColor = mix(uWaterColor, uHighlightColor, fresnel * 0.5);
+                    finalColor += uHighlightColor * spec * 2.0;
+                    
+                    gl_FragColor = vec4(finalColor, 0.9);
+                }
+            `
+        };
+
+        // ============================================================================
+        // AUDIO MANAGER
+        // ============================================================================
+        class AudioManager {
+            constructor() {
+                this.ctx = null;
+                this.osc = null;
+                this.gain = null;
+                this.isPlaying = false;
+                this.btn = document.getElementById('audio-toggle');
+                
+                this.btn.addEventListener('click', () => this.toggle());
+            }
+
+            init() {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                
+                // Deep ambient drone
+                this.osc = this.ctx.createOscillator();
+                this.osc.type = 'sine';
+                this.osc.frequency.setValueAtTime(55, this.ctx.currentTime); // Low A
+                
+                // LFO for breathing effect
+                this.lfo = this.ctx.createOscillator();
+                this.lfo.type = 'sine';
+                this.lfo.frequency.setValueAtTime(0.05, this.ctx.currentTime);
+                
+                this.lfoGain = this.ctx.createGain();
+                this.lfoGain.gain.setValueAtTime(5, this.ctx.currentTime);
+                
+                this.lfo.connect(this.lfoGain);
+                this.lfoGain.connect(this.osc.frequency);
+                
+                this.gain = this.ctx.createGain();
+                this.gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                
+                this.osc.connect(this.gain);
+                this.gain.connect(this.ctx.destination);
+                
+                this.osc.start();
+                this.lfo.start();
+            }
+
+            toggle() {
+                if(!this.ctx) this.init();
+                
+                if(this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                if(this.isPlaying) {
+                    this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 1.5);
+                    this.btn.innerText = "SOUND [OFF]";
+                    this.isPlaying = false;
+                } else {
+                    this.gain.gain.setTargetAtTime(0.15, this.ctx.currentTime, 3.0);
+                    this.btn.innerText = "SOUND [ON]";
+                    this.isPlaying = true;
+                }
+            }
+        }
+
+        // ============================================================================
+        // CORE APPLICATION
+        // ============================================================================
+        class App {
+            constructor() {
+                this.container = document.getElementById('webgl-container');
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.pixelRatio = Math.min(window.devicePixelRatio, 2);
+                
+                // State
+                this.scrollProgress = 0;
+                this.isMobile = this.width < 768;
+                
+                // Check WebGL
+                if (!this.checkWebGL()) {
+                    document.body.classList.add('fallback-active');
+                    return;
+                }
+
+                // Systems
+                this.audio = new AudioManager();
+                this.initCursor();
+                this.initThree();
+                this.buildWorld();
+                this.initScrollEngine();
+                this.simulateLoading();
+            }
+
+            checkWebGL() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            initCursor() {
+                this.cursor = {
+                    dot: document.getElementById('cursor-dot'),
+                    ring: document.getElementById('cursor-ring'),
+                    x: this.width / 2,
+                    y: this.height / 2,
+                    targetX: this.width / 2,
+                    targetY: this.height / 2
+                };
+
+                document.addEventListener('mousemove', (e) => {
+                    this.cursor.targetX = e.clientX;
+                    this.cursor.targetY = e.clientY;
+                });
+
+                document.querySelectorAll('.hoverable').forEach(el => {
+                    el.addEventListener('mouseenter', () => {
+                        this.cursor.ring.style.width = '50px';
+                        this.cursor.ring.style.height = '50px';
+                        this.cursor.ring.style.borderColor = 'rgba(243, 217, 189, 0.8)';
+                    });
+                    el.addEventListener('mouseleave', () => {
+                        this.cursor.ring.style.width = '30px';
+                        this.cursor.ring.style.height = '30px';
+                        this.cursor.ring.style.borderColor = 'rgba(243, 217, 189, 0.4)';
+                    });
+                });
+
+                // Smooth cursor loop
+                const updateCursor = () => {
+                    this.cursor.x += (this.cursor.targetX - this.cursor.x) * 0.15;
+                    this.cursor.y += (this.cursor.targetY - this.cursor.y) * 0.15;
+                    
+                    this.cursor.dot.style.transform = `translate(${this.cursor.targetX}px, ${this.cursor.targetY}px) translate(-50%, -50%)`;
+                    this.cursor.ring.style.transform = `translate(${this.cursor.x}px, ${this.cursor.y}px) translate(-50%, -50%)`;
+                    
+                    requestAnimationFrame(updateCursor);
+                };
+                updateCursor();
+            }
+
+            initThree() {
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x050404);
+                this.scene.fog = new THREE.FogExp2(0x0D0B0B, 0.0035);
+
+                // Camera
+                const fov = this.isMobile ? 60 : 45;
+                this.camera = new THREE.PerspectiveCamera(fov, this.width / this.height, 0.1, 1000);
+                // Starting Macro Position
+                this.camera.position.set(0, 0, 15);
+                this.camera.lookAt(0, 0, 0);
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+                this.renderer.setSize(this.width, this.height);
+                this.renderer.setPixelRatio(this.pixelRatio);
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.2;
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // Base Lighting
+                const ambient = new THREE.AmbientLight(0x0D0B0B, 2.0); // Very dim obsidian
+                this.scene.add(ambient);
+
+                this.dirLight = new THREE.DirectionalLight(0xF3D9BD, 1.5);
+                this.dirLight.position.set(50, 100, -50);
+                this.dirLight.castShadow = true;
+                this.dirLight.shadow.mapSize.width = 1024;
+                this.dirLight.shadow.mapSize.height = 1024;
+                this.dirLight.shadow.camera.far = 300;
+                this.scene.add(this.dirLight);
+
+                // Resize handler
+                window.addEventListener('resize', this.onResize.bind(this));
+            }
+
+            // Procedural Canvas Material for Sandstone
+            createSandstoneMaterial() {
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0xB87862, // Terracotta base
+                    roughness: 0.9,
+                    metalness: 0.1,
+                });
+
+                // Inject noise into standard material for architectural texture
+                mat.onBeforeCompile = (shader) => {
+                    shader.vertexShader = GLSL.simplexNoise3D + '\n' + shader.vertexShader;
+                    shader.vertexShader = shader.vertexShader.replace(
+                        '#include <begin_vertex>',
+                        `
+                        vec3 transformed = vec3(position);
+                        // Subtle vertex displacement
+                        float n = snoise(transformed * 0.05) * 2.0;
+                        transformed += normal * n;
+                        `
+                    );
+
+                    shader.fragmentShader = GLSL.simplexNoise3D + '\n' + shader.fragmentShader;
+                    shader.fragmentShader = shader.fragmentShader.replace(
+                        '#include <color_fragment>',
+                        `
+                        #include <color_fragment>
+                        // Mix color based on world-space-like noise
+                        float noiseVal = snoise(vViewPosition * 0.1) * 0.5 + 0.5;
+                        vec3 dustColor = vec3(0.95, 0.85, 0.74); // Ivory/Sand
+                        diffuseColor.rgb = mix(diffuseColor.rgb, dustColor, noiseVal * 0.3);
+                        `
+                    );
+                };
+                return mat;
+            }
+
+            buildWorld() {
+                this.worldGroup = new THREE.Group();
+                this.scene.add(this.worldGroup);
+
+                const sandMat = this.createSandstoneMaterial();
+
+                // 1. The Central Sun Core
+                const sunGeo = new THREE.SphereGeometry(8, 64, 64);
+                const sunMat = new THREE.ShaderMaterial({
+                    vertexShader: GLSL.sunVertex,
+                    fragmentShader: GLSL.sunFragment,
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uColorA: { value: new THREE.Color(0xF3D9BD) }, // Ivory
+                        uColorB: { value: new THREE.Color(0xB87862) }  // Terracotta/Rose
+                    },
+                    transparent: true
+                });
+                this.sun = new THREE.Mesh(sunGeo, sunMat);
+                this.sun.position.set(0, 20, -100);
+                this.worldGroup.add(this.sun);
+
+                // Add a point light to the sun
+                const sunLight = new THREE.PointLight(0xD6A28C, 5, 200);
+                this.sun.add(sunLight);
+
+                // 2. Reflecting Pool (Water)
+                const waterGeo = new THREE.PlaneGeometry(200, 200, 64, 64);
+                this.waterMat = new THREE.ShaderMaterial({
+                    vertexShader: GLSL.waterVertex,
+                    fragmentShader: GLSL.waterFragment,
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uSunPos: { value: this.sun.position },
+                        uWaterColor: { value: new THREE.Color(0x050404) },
+                        uHighlightColor: { value: new THREE.Color(0xD6A28C) }
+                    },
+                    transparent: true,
+                    side: THREE.DoubleSide
+                });
+                this.water = new THREE.Mesh(waterGeo, this.waterMat);
+                this.water.rotation.x = -Math.PI / 2;
+                this.water.position.y = -5;
+                this.worldGroup.add(this.water);
+
+                // 3. Monumental Architecture (Canyon / Arches)
+                // Generate massive brutalist shapes
+                for(let i=0; i<8; i++) {
+                    const width = 10 + Math.random() * 20;
+                    const height = 40 + Math.random() * 80;
+                    const depth = 20 + Math.random() * 40;
+                    const archGeo = new THREE.BoxGeometry(width, height, depth, 16, 16, 16);
+                    
+                    const arch = new THREE.Mesh(archGeo, sandMat);
+                    arch.castShadow = true;
+                    arch.receiveShadow = true;
+                    
+                    // Place along an avenue
+                    const xSide = i % 2 === 0 ? 1 : -1;
+                    arch.position.set(
+                        (40 + Math.random() * 20) * xSide,
+                        height / 2 - 10,
+                        -20 - (i * 30)
+                    );
+                    
+                    // Slight random rotation
+                    arch.rotation.y = (Math.random() - 0.5) * 0.2;
+                    this.worldGroup.add(arch);
+                }
+
+                // 4. Concentric Typography Rings (Astronomical Orrery)
+                this.rings = new THREE.Group();
+                this.sun.add(this.rings); // Attach to sun
+                
+                const alphabets = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z ".repeat(3);
+                
+                // Helper to create text texture
+                const createTextTexture = (text, size, radius) => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 2048;
+                    canvas.height = 128;
+                    ctx.fillStyle = '#000000'; // Transparent bg essentially, we use as alpha
+                    ctx.fillRect(0,0, canvas.width, canvas.height);
+                    ctx.font = `300 ${size}px Cinzel`;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, canvas.width/2, canvas.height/2);
+                    
+                    const tex = new THREE.CanvasTexture(canvas);
+                    tex.wrapS = THREE.RepeatWrapping;
+                    tex.wrapT = THREE.RepeatWrapping;
+                    return tex;
+                };
+
+                const radii = [14, 18, 22];
+                const speeds = [0.001, -0.0015, 0.0008];
+                this.ringMeshes = [];
+
+                radii.forEach((r, idx) => {
+                    const tex = createTextTexture(alphabets, 60 - (idx*5), r);
+                    const geo = new THREE.CylinderGeometry(r, r, 2, 64, 1, true);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0xF3D9BD,
+                        alphaMap: tex,
+                        transparent: true,
+                        opacity: 0.8,
+                        side: THREE.DoubleSide,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const ring = new THREE.Mesh(geo, mat);
+                    ring.userData = { speed: speeds[idx] };
+                    // Tilt the rings slightly
+                    ring.rotation.x = 0.2 + (idx * 0.1);
+                    ring.rotation.z = -0.1;
+                    
+                    this.ringMeshes.push(ring);
+                    this.rings.add(ring);
+                });
+
+                // 5. Project Monoliths (Worlds)
+                this.projects = new THREE.Group();
+                this.worldGroup.add(this.projects);
+                
+                const projMat = new THREE.MeshStandardMaterial({
+                    color: 0x0D0B0B,
+                    metalness: 0.9,
+                    roughness: 0.1,
+                    envMapIntensity: 1.0
+                });
+
+                for(let i=0; i<4; i++) {
+                    const pGeo = new THREE.OctahedronGeometry(4, 0);
+                    const proj = new THREE.Mesh(pGeo, projMat);
+                    proj.position.set(
+                        (Math.random() - 0.5) * 60,
+                        15 + Math.random() * 10,
+                        -50 - Math.random() * 60
+                    );
+                    
+                    // Add an internal light
+                    const pLight = new THREE.PointLight(0xF3D9BD, 0.5, 20);
+                    proj.add(pLight);
+                    
+                    // Store initial Y for floating anim
+                    proj.userData = { initialY: proj.position.y, offset: Math.random() * Math.PI * 2 };
+                    this.projects.add(proj);
+                }
+
+                // 6. Atmospheric Dust Particles
+                const partGeo = new THREE.BufferGeometry();
+                const partCount = this.isMobile ? 1500 : 4000;
+                const posArray = new Float32Array(partCount * 3);
+                for(let i=0; i<partCount * 3; i+=3) {
+                    posArray[i] = (Math.random() - 0.5) * 200;
+                    posArray[i+1] = Math.random() * 100;
+                    posArray[i+2] = (Math.random() - 0.5) * 200 - 50;
+                }
+                partGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+                const partMat = new THREE.PointsMaterial({
+                    size: 0.2,
+                    color: 0xD6A28C,
+                    transparent: true,
+                    opacity: 0.4,
+                    blending: THREE.AdditiveBlending
+                });
+                this.particles = new THREE.Points(partGeo, partMat);
+                this.worldGroup.add(this.particles);
+                
+                // Transition Particles (Hidden initially)
+                const sigGeo = new THREE.BufferGeometry();
+                const sigCount = 10000;
+                const sigPos = new Float32Array(sigCount * 3);
+                // We will morph these later, scatter them for now
+                for(let i=0; i<sigCount*3; i++) {
+                    sigPos[i] = (Math.random() - 0.5) * 300;
+                }
+                sigGeo.setAttribute('position', new THREE.BufferAttribute(sigPos, 3));
+                const sigMat = new THREE.PointsMaterial({
+                    size: 0.1,
+                    color: 0xF3D9BD,
+                    transparent: true,
+                    opacity: 0.0, // Invisible start
+                    blending: THREE.AdditiveBlending
+                });
+                this.sigParticles = new THREE.Points(sigGeo, sigMat);
+                this.scene.add(this.sigParticles);
+            }
+
+            initScrollEngine() {
+                gsap.registerPlugin(ScrollTrigger);
+
+                // The master timeline mapped to scroll proxy
+                const tl = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: "#scroll-proxy",
+                        start: "top top",
+                        end: "bottom bottom",
+                        scrub: 1.5 // Cinematic smoothing
+                    }
+                });
+
+                // Hide Intro UI
+                tl.to("#text-intro", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 0);
+
+                // --- CHAPTER 1: DISCOVERY (0 to 0.3) ---
+                // Camera pulls back from Sun macro
+                tl.to(this.camera.position, {
+                    z: 50,
+                    y: 10,
+                    duration: 2,
+                    ease: "power2.inOut"
+                }, 0);
+                
+                // Reveal environment (Fog pushes back)
+                tl.to(this.scene.fog, {
+                    density: 0.007,
+                    duration: 2
+                }, 0);
+
+                // --- CHAPTER 2: TYPOGRAPHY ORBIT (0.3 to 0.6) ---
+                // Camera flies forward, aiming slightly up
+                tl.to(this.camera.position, {
+                    z: -60,
+                    y: 25,
+                    duration: 3,
+                    ease: "sine.inOut"
+                }, 2);
+                
+                // Sun rotates
+                tl.to(this.rings.rotation, {
+                    y: Math.PI * 2,
+                    duration: 3,
+                    ease: "none"
+                }, 2);
+
+                // Show Projects text halfway
+                tl.to("#text-projects", { opacity: 1, duration: 0.5 }, 3);
+                tl.to("#text-projects", { opacity: 0, duration: 0.5 }, 4.5);
+
+                // --- CHAPTER 3: TRANSFORMATION & CONVERGENCE (0.6 to 1.0) ---
+                // Architecture and world fades out/drops
+                tl.to(this.worldGroup.position, {
+                    y: -100,
+                    duration: 3,
+                    ease: "power3.in"
+                }, 5);
+                
+                // Fog engulfs everything
+                tl.to(this.scene.fog, {
+                    density: 0.05,
+                    duration: 2
+                }, 5);
+
+                // Camera stops, looks at center
+                tl.to(this.camera.position, {
+                    z: -80,
+                    y: 20,
+                    duration: 2,
+                    ease: "power2.out"
+                }, 6);
+
+                // Signature particles become visible
+                tl.to(this.sigParticles.material, {
+                    opacity: 0.8,
+                    duration: 1
+                }, 6);
+
+                // Morph particles to center point
+                tl.to(this.sigParticles.scale, {
+                    x: 0.001, y: 0.001, z: 0.001,
+                    duration: 2,
+                    ease: "expo.in"
+                }, 7);
+
+                // Total darkness
+                tl.to(this.scene.background, { r: 0, g: 0, b: 0, duration: 1 }, 7.5);
+                tl.to(this.scene.fog, { density: 0.2, duration: 1 }, 7.5);
+
+                // Final UI Reveal
+                tl.set("#text-signature", { display: "block" }, 8);
+                tl.fromTo("#sig-s", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 1, ease: "power2.out" }, 8);
+                tl.to("#sig-full", { opacity: 1, duration: 1.5, ease: "power2.inOut" }, 9);
+            }
+
+            simulateLoading() {
+                let progress = 0;
+                const bar = document.getElementById('loader-bar');
+                const status = document.getElementById('loader-status');
+                const loader = document.getElementById('loader');
+                
+                const stages = [
+                    "ALLOCATING MEMORY",
+                    "GENERATING ARCHITECTURE",
+                    "COMPILING GLSL SHADERS",
+                    "ATMOSPHERE INITIALIZATION",
+                    "ATELIER READY"
+                ];
+
+                const interval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    if(progress > 100) progress = 100;
+                    
+                    bar.style.width = progress + "%";
+                    
+                    const stageIdx = Math.min(Math.floor(progress / 20), 4);
+                    status.innerText = stages[stageIdx];
+
+                    if(progress === 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            loader.style.opacity = "0";
+                            setTimeout(() => {
+                                loader.style.display = "none";
+                                // Start render loop
+                                this.clock = new THREE.Clock();
+                                this.render();
+                            }, 2000);
+                        }, 500);
+                    }
+                }, 200);
+            }
+
+            onResize() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.isMobile = this.width < 768;
+                
+                this.camera.aspect = this.width / this.height;
+                this.camera.fov = this.isMobile ? 60 : 45;
+                this.camera.updateProjectionMatrix();
+                
+                this.renderer.setSize(this.width, this.height);
+            }
+
+            render() {
+                requestAnimationFrame(this.render.bind(this));
+                
+                const time = this.clock.getElapsedTime();
+
+                // Shaders
+                if(this.sun && this.sun.material.uniforms) {
+                    this.sun.material.uniforms.uTime.value = time;
+                }
+                if(this.waterMat && this.waterMat.uniforms) {
+                    this.waterMat.uniforms.uTime.value = time;
+                }
+
+                // Ring rotation (constant baseline + GSAP handles major spins)
+                if (this.ringMeshes) {
+                    this.ringMeshes.forEach(ring => {
+                        ring.rotation.y += ring.userData.speed;
+                    });
+                }
+
+                // Floating Projects
+                if (this.projects) {
+                    this.projects.children.forEach(proj => {
+                        proj.position.y = proj.userData.initialY + Math.sin(time + proj.userData.offset) * 2;
+                        proj.rotation.x += 0.002;
+                        proj.rotation.y += 0.003;
+                    });
+                }
+
+                // Subtle Particle Drift
+                if (this.particles) {
+                    this.particles.rotation.y = time * 0.02;
+                }
+
+                // Camera breathing (Cinematic micro-movement)
+                // We add this on top of GSAP by modifying the camera rotation slightly
+                const breathX = Math.sin(time * 0.5) * 0.002;
+                const breathY = Math.cos(time * 0.3) * 0.002;
+                this.camera.rotateX(breathX);
+                this.camera.rotateY(breathY);
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.shauryaApp = new App();
+        });
+
+    </script>
+</body>
+</html>
